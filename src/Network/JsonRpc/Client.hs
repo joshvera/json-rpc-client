@@ -49,7 +49,7 @@ import Network.JsonRpc.Server (RpcResult, RpcError (..), rpcError)
 import qualified Data.Aeson as A
 import Data.Aeson ((.=), (.:))
 import Data.Text (Text (), pack)
-import Data.ByteString.Lazy.Char8 as B (ByteString, dropWhile, tail)
+import Data.ByteString.Lazy as B (ByteString, dropWhile, tail)
 import qualified Data.HashMap.Strict as H
 import Data.Ord (comparing)
 import Data.Maybe (catMaybes)
@@ -175,8 +175,8 @@ processRqs server requests | V.null requests = return V.empty
                                      "Client cannot parse JSON response: " ++ msg
           process f rqs = maybe (return V.empty) (fmap f . decode) =<<
                           (lift . server . A.encode) rqs
-          dropHeader = B.tail . B.tail . B.dropWhile (/= '\r')
-          body = B.tail . B.tail . dropHeader . dropHeader
+          dropHeader = B.tail . B.tail . B.dropWhile (/= (toEnum $ fromEnum '\r'))
+          body = B.tail . B.tail . dropHeader
 
 -- | Converts all requests in a batch to notifications.
 voidBatch :: Batch r -> Batch ()
