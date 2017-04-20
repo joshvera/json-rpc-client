@@ -49,14 +49,13 @@ import Network.JsonRpc.Server (RpcResult, RpcError (..), rpcError)
 import qualified Data.Aeson as A
 import Data.Aeson ((.=), (.:))
 import Data.Text (Text (), pack)
-import Data.ByteString.Lazy (ByteString)
+import Data.ByteString.Lazy.Char8 as B (ByteString, dropWhile, tail)
 import qualified Data.HashMap.Strict as H
 import Data.Ord (comparing)
 import Data.Maybe (catMaybes)
 import qualified Data.Vector as V
 import qualified Data.Vector.Algorithms.Intro as VA
 import Control.Arrow ((&&&))
-import Control.Monad (liftM)
 import Control.Monad.Except (ExceptT (..), throwError, lift, (<=<))
 import Control.Applicative (Alternative (..), (<|>))
 
@@ -135,11 +134,11 @@ composeWithBatch :: (ClientFunction ps r g, ComposeMultiParam f g h) => f -> Sig
 composeWithBatch f = _compose f . toBatchFunction
 
 -- | Evaluates a batch.  The process depends on its size:
---   
+--
 -- 1. If the batch is empty, the server function is not called.
---   
+--
 -- 2. If the batch has exactly one request, it is sent as a request object.
---   
+--
 -- 3. If the batch has multiple requests, they are sent as an array of request objects.
 runBatch :: Monad m =>
             Connection m  -- ^ Function for sending requests to the server.
@@ -170,12 +169,14 @@ processRqs :: Monad m =>
 processRqs server requests | V.null requests = return V.empty
                            | V.length requests == 1 = process V.singleton $ V.head requests
                            | otherwise = process id requests
-    where decode rsp = case A.eitherDecode rsp of
+    where decode rsp = case A.eitherDecode (body rsp) of
                          Right r -> return r
                          Left msg -> throwError $ clientError $
                                      "Client cannot parse JSON response: " ++ msg
-          process f rqs = maybe (return V.empty) (liftM f . decode) =<<
+          process f rqs = maybe (return V.empty) (fmap f . decode) =<<
                           (lift . server . A.encode) rqs
+          dropHeader = B.tail . B.tail . B.dropWhile (/= '\r')
+          body = B.tail . B.tail . dropHeader . dropHeader
 
 -- | Converts all requests in a batch to notifications.
 voidBatch :: Batch r -> Batch ()
