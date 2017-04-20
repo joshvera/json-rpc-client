@@ -1,0 +1,7 @@
+resolver: lts-8.11
+packages:
+- '.'
+extra-deps:
+- json-rpc-server-0.2.6.0
+flags: {}
+extra-package-dbs: []
