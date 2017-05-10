@@ -156,7 +156,7 @@ runBatch server batch = liftResult . bToResult batch =<<
           validate rsps = let (results, ids) = V.unzip $ V.map (rsResult &&& rsId) rsps
                           in if ids /= V.enumFromN 1 (bNonNotifications batch)
                              then throwError $ clientError $
-                                      "Invalid response IDs: " ++ show ids
+                                      "Invalid response IDs: " ++ show ids ++ "for results: " ++ show results
                              else return results
 
 assignId :: Request -> Int -> IdRequest
